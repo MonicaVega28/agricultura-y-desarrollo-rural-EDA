@@ -33,3 +33,7 @@ def leer_TablaBD(nombre_tabla):
     df = BD.get_Tabla(nombre_tabla)
     return df
  
+ 
+def conversion_Datos(df, columna, tipo_dato):
+    df[columna] = df[columna].astype(tipo_dato)
+    return df
