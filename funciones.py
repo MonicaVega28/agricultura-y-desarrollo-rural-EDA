@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import ConexionBD as BD
 
 def leer_archivo(nombre_archivo):
     df = pd.read_csv(nombre_archivo)
@@ -26,3 +27,9 @@ def grafico_dispersion(df, x, y, titulo="Gráfico de dispersión"):
     plt.ylabel(y)
     plt.grid(True)
     plt.show()
+    
+
+def leer_TablaBD(nombre_tabla):
+    df = BD.get_Tabla(nombre_tabla)
+    return df
+ 
