@@ -1,7 +1,12 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import ConexionBD as BD
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
+# ---------------------------------------------------------
+# SECCIÓN 1: CARGA Y TRANSFORMACIÓN DE DATOS
+# ---------------------------------------------------------
 def leer_archivo(nombre_archivo):
     df = pd.read_csv(nombre_archivo)
     return df
@@ -39,56 +44,116 @@ def conversion_Datos(df, columna, tipo_dato):
     return df
 
 
-def grafico_mancuerna(df, tiempo, sembrado, cosechado, titulo="Análisis de Brecha de Áreas"):
+# =============================================================================
+# GRÁFICO DE MANCUERNA 
+# =============================================================================
 
-    plt.figure(figsize=(12, 7))
+def grafico_mancuerna_plotly(df, tiempo, sembrado, cosechado, titulo="Análisis de Brecha de Áreas"):
+    # 1. Asegurar que los datos estén ordenados por tiempo para que el gráfico sea lógico
+    df_sorted = df.sort_values(tiempo)
+
+    fig = go.Figure()
+
+    # 2. Agregar las líneas que unen los puntos (las "mancuernas")
+    # Plotly no tiene un 'hlines' directo para esto, así que usamos un bucle eficiente
+    for i, row in df_sorted.iterrows():
+        fig.add_trace(go.Scatter(
+            x=[row[cosechado], row[sembrado]],
+            y=[row[tiempo], row[tiempo]],
+            mode="lines",
+            line=dict(color="grey", width=2),
+            showlegend=False,
+            hoverinfo='skip'
+        ))
+
+    # 3. Agregar los puntos de Área Cosechada
+    fig.add_trace(go.Scatter(
+        x=df_sorted[cosechado],
+        y=df_sorted[tiempo],
+        mode="markers",
+        name="Cosechado (Producción)",
+        marker=dict(color="red", size=12),
+        hovertemplate="Cosechado: %{x} ha<extra></extra>"
+    ))
+
+    # 4. Agregar los puntos de Área Sembrada
+    fig.add_trace(go.Scatter(
+        x=df_sorted[sembrado],
+        y=df_sorted[tiempo],
+        mode="markers",
+        name="Sembrado (Total)",
+        marker=dict(color="navy", size=12),
+        hovertemplate="Sembrado: %{x} ha<extra></extra>"
+    ))
+
+    # 5. Configuración estética
+    fig.update_layout(
+        title=f"<b>{titulo}</b>",
+        title_x=0.5,
+        xaxis_title="Hectáreas",
+        yaxis_title="Periodo",
+        height=700,
+        template="plotly_white",
+        hovermode="closest",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+
+    fig.show()
     
-    # 1. Dibujar la línea gris que une los dos puntos (la brecha)
-    plt.hlines(y=df[tiempo], xmin=df[cosechado], xmax=df[sembrado], color='grey', alpha=0.5)
-    
-    # 2. Dibujar los puntos de inicio y fin
-    plt.scatter(df[sembrado], df[tiempo], color='navy', label='Sembrado', s=100, zorder=3)
-    plt.scatter(df[cosechado], df[tiempo], color='red', label='Cosechado', s=100, zorder=3)
-    
-    # 3. Estética del gráfico
-    plt.title(titulo, fontsize=14, fontweight='bold')
-    plt.xlabel("Hectáreas")
-    plt.ylabel("Periodo (Semestre/Mes)")
-    plt.legend()
-    plt.grid(axis='x', linestyle='--', alpha=0.7)
-    plt.tight_layout() # Ajusta márgenes para que no se corten las etiquetas
-    plt.show()
-    
-    
-def grafico_pareto_rubros(df, columna_categoria, columna_valor, titulo="Análisis de Pareto de Producción"):
-    # 1. Preparar los datos: Agrupar, Sumar y Ordenar
+
+# =============================================================================
+# GRÁFICO DE PARETO PARA RUBROS (PLOTLY)
+# =============================================================================
+
+def grafico_pareto_top50(df, columna_categoria, columna_valor, titulo="Análisis de Pareto: Top 50 Rubros"):
+    # 1. Preparar datos completos para el cálculo correcto del 100%
     df_pareto = df.groupby(columna_categoria)[columna_valor].sum().sort_values(ascending=False).reset_index()
+    total_produccion = df_pareto[columna_valor].sum()
     
-    # 2. Calcular porcentajes y acumulado
-    df_pareto['porcentaje'] = (df_pareto[columna_valor] / df_pareto[columna_valor].sum()) * 100
+    # 2. Calcular porcentajes sobre el TOTAL
+    df_pareto['porcentaje'] = (df_pareto[columna_valor] / total_produccion) * 100
     df_pareto['acumulado'] = df_pareto['porcentaje'].cumsum()
 
-    # 3. Crear la visualización
-    fig, ax1 = plt.subplots(figsize=(14, 7))
+    # 3. Filtrar solo los primeros 50 para la visualización
+    df_top = df_pareto.head(50)
 
-    # Barras para producción individual
-    ax1.bar(df_pareto[columna_categoria], df_pareto[columna_valor], color="steelblue", alpha=0.8)
-    ax1.set_ylabel("Producción (Toneladas)")
-    plt.xticks(rotation=90)
+    # 4. Crear figura interactiva
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # Eje secundario para el porcentaje acumulado
-    ax2 = ax1.twinx()
-    ax2.plot(df_pareto[columna_categoria], df_pareto['acumulado'], color="red", marker="D", ms=5, label="% Acumulado")
-    ax2.axhline(80, color="orange", linestyle="--", label="Límite 80%") # Línea guía del 80%
-    ax2.set_ylabel("Porcentaje Acumulado (%)")
-    ax2.set_ylim(0, 110)
+    # Barras de Producción (Top 50)
+    fig.add_trace(
+        go.Bar(x=df_top[columna_categoria], y=df_top[columna_valor], 
+               name="Producción (Ton)", marker_color='steelblue'),
+        secondary_y=False,
+    )
 
-    plt.title(titulo, fontsize=15, fontweight='bold')
-    ax1.grid(axis='y', linestyle='--', alpha=0.4)
+    # Línea de Porcentaje Acumulado (Top 50)
+    fig.add_trace(
+        go.Scatter(x=df_top[columna_categoria], y=df_top['acumulado'], 
+                   name="% Acumulado", line=dict(color="red", width=3)),
+        secondary_y=True,
+    )
+
+    # Línea guía del 80%
+    fig.add_hline(y=80, line_dash="dash", line_color="orange", secondary_y=True,
+                  annotation_text="Límite Pareto (80%)", annotation_position="bottom right")
+
+    # 5. Estética y Legibilidad
+    fig.update_layout(
+        title_text=f"<b>{titulo}</b>",
+        title_x=0.5,
+        xaxis_tickangle=-45,
+        height=600,
+        margin=dict(b=100),
+        hovermode="x unified",
+        template="plotly_white"
+    )
+
+    fig.update_yaxes(title_text="Producción (Toneladas)", secondary_y=False)
+    fig.update_yaxes(title_text="Porcentaje Acumulado (%)", secondary_y=True, range=[0, 105])
+
+    fig.show()
     
-    # Identificar cuántos rubros representan el 80%
-    cantidad_80 = df_pareto[df_pareto['acumulado'] <= 85].shape[0] # Usamos 85 para ver los que bordean el límite
-    print(f" Resultado del Análisis: Aproximadamente {cantidad_80} rubros generan el 80% de la producción total.")
-    
-    plt.tight_layout()
-    plt.show()
+    # Insight para el reporte
+    cantidad_80 = df_pareto[df_pareto['acumulado'] <= 81].shape[0]
+    print(f"Análisis Profesional: Solo {cantidad_80} rubros representan el 80% de la producción total en Antioquia.")
