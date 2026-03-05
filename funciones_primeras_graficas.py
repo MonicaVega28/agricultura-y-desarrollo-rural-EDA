@@ -13,24 +13,7 @@ def unir_data(df_csv, df_bd):
     df_datos_completos = pd.concat([df_csv, df_bd], ignore_index=True)
     return df_datos_completos
 
-def grafico_lineas(df, columna_x, columna_y, titulo="Gráfico de líneas"):
-    plt.figure()
-    plt.plot(df[columna_x], df[columna_y])
-    plt.title(titulo)
-    plt.xlabel(columna_x)
-    plt.ylabel(columna_y)
-    plt.grid(True)
-    plt.show()
 
-def grafico_dispersion(df, x, y, titulo="Gráfico de dispersión"):
-    plt.figure()
-    plt.scatter(df[x], df[y])
-    plt.title(titulo)
-    plt.xlabel(x)
-    plt.ylabel(y)
-    plt.grid(True)
-    plt.show()
-    
 
 def leer_TablaBD(nombre_tabla):
     df = BD.get_Tabla(nombre_tabla)
@@ -83,10 +66,8 @@ def preparar_datos_area_volumen(df):
     df_total["Rendimiento"] = df_total["Volumen Producción"] / df_total["Área Producción"]
     
     df_total["Produccion_norm"] = df_total["Volumen Producción"] / df_total["Volumen Producción"].max()
-    df_total["Area_norm"] = df_total["Área Producción"] / df_total["Área Producción"].max()
-    
+    df_total["Area_norm"] = df_total["Área Producción"] / df_total["Área Producción"].max()    
     return df_total
-
 
 
 def grafica_top(df, columna_valor, titulo, top_n=10):
@@ -132,8 +113,7 @@ def grafica_top(df, columna_valor, titulo, top_n=10):
         )
     )
     
-    fig.update_traces(marker_color="#2E86C1")
-    
+    fig.update_traces(marker_color="#2E86C1")    
     return fig
 
 def grafica_comparacion_normalizada(df, top_n=10):
@@ -180,9 +160,7 @@ def grafica_comparacion_normalizada(df, top_n=10):
             gridwidth=1
         )
     )
-
     return fig
-
 
 
 def top_municipios(df, top=15):
@@ -211,7 +189,7 @@ def top_municipios(df, top=15):
 
     return fig
 
-def treemap_produccion_municipio(df):
+def peso_produccion_sub_municipio(df):
 
     prod = (
         df.groupby(["Subregion", "Municipio"])["Volumen Producción"]
@@ -256,7 +234,6 @@ def heatmap_especializacion(df):
         xaxis_title="Rubro",
         yaxis_title="Subregión"
     )
-
     return fig
 
 def especializacion_subregion(df):
@@ -274,17 +251,16 @@ def especializacion_subregion(df):
         color="Rubro",
         title="Distribución de la producción agrícola por subregión y rubro"
     )
-
     return fig
 
-def sankey_subregion_rubro(df, top_rubros=3):
+def top_rubro_subregion(df, top_rubros=3):
 
     # limpiar nulos de producción
-    data = df.dropna(subset=["Volumen Producción"])
+    #data = df.dropna(subset=["Volumen Producción"])
 
     # agregación por subregión y rubro
     agg = (
-        data.groupby(["Subregion", "Rubro"])["Volumen Producción"]
+        df.groupby(["Subregion", "Rubro"])["Volumen Producción"]
         .sum()
         .reset_index()
     )
@@ -331,7 +307,7 @@ def sankey_subregion_rubro(df, top_rubros=3):
     return fig
 
 
-def waterfall_produccion(df):
+def variacion_produccion(df):
 
     prod = (
         df.groupby("Año")["Volumen Producción"]
