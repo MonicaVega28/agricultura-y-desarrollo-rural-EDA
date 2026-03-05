@@ -189,6 +189,118 @@ def grafico_pareto_top50(df, columna_categoria, columna_valor, titulo="Análisis
     print(f"Análisis Profesional: Solo {cantidad_80} rubros representan el 80% de la producción total en Antioquia.")
 
 
+def grafico_tendencia_lineas(df, columna_tiempo, columna_valor, titulo="Tendencia del Área Sembrada"):
+    """
+    Genera un gráfico de líneas interactivo con la paleta de colores azul unificada.
+    """
+    # 1. Agrupar por tiempo para asegurar que sumamos todo lo del mismo año
+    df_linea = df.groupby(columna_tiempo)[columna_valor].sum().reset_index()
+    df_linea = df_linea.sort_values(columna_tiempo)
+
+    # 2. Crear el gráfico
+    fig = go.Figure()
+
+    # --- CAMBIO DE COLOR AQUÍ ---
+    # Cambiamos 'forestgreen' por '#3182bd' para mantener la identidad visual
+    fig.add_trace(go.Scatter(
+        x=df_linea[columna_tiempo],
+        y=df_linea[columna_valor],
+        mode='lines+markers',
+        line=dict(color='#3182bd', width=3), # Azul unificado
+        marker=dict(size=10, color='#3182bd'), # Marcadores a juego
+        name=columna_valor,
+        hovertemplate="Año: %{x}<br>Total: %{y} ha<extra></extra>"
+    ))
+
+    # 3. Estética profesional
+    fig.update_layout(
+        title=f"<b>{titulo}</b>",
+        title_x=0.5,
+        xaxis_title="Año / Periodo",
+        yaxis_title="Hectáreas",
+        template="plotly_white",
+        hovermode="x unified"
+    )
+
+    fig.show()
+
+
+def grafico_diferencia_areas(df, columna_tiempo, col_sembrada, col_cosechada, titulo="Análisis de Hectáreas No Cosechadas"):
+    """
+    Calcula y grafica la diferencia neta (pérdida) entre el área 
+    sembrada y la cosecha total por periodo, usando la paleta de colores unificada.
+    """
+    # 1. Agrupar y calcular la diferencia
+    df_gap = df.groupby(columna_tiempo)[[col_sembrada, col_cosechada]].sum().reset_index()
+    df_gap['Diferencia'] = df_gap[col_sembrada] - df_gap[col_cosechada]
+    df_gap = df_gap.sort_values(columna_tiempo)
+
+    # 2. Crear el gráfico de barras interactivo
+    fig = go.Figure()
+
+    # --- CAMBIO DE COLOR AQUÍ ---
+    # Se reemplaza 'indianred' por el azul hexadecimal '#3182bd' extraído de la referencia.
+    fig.add_trace(go.Bar(
+        x=df_gap[columna_tiempo],
+        y=df_gap['Diferencia'],
+        marker_color='#3182bd', # Color unificado 
+        name='Hectáreas Perdidas',
+        hovertemplate="Año: %{x}<br>Pérdida: %{y} ha<extra></extra>"
+    ))
+
+    # 3. Estética de reporte
+    fig.update_layout(
+        title=f"<b>{titulo}</b>",
+        title_x=0.5,
+        xaxis_title="Año / Periodo",
+        yaxis_title="Hectáreas de Diferencia (Pérdida)",
+        template="plotly_white", # Mantiene fondo limpio
+        hovermode="x unified"
+    )
+
+    fig.show()
+
+def grafico_burbujas_emergentes_plotly(df, rubro, tiempo, valor, anio_i, anio_f):
+    # 1. Preparar datos de ambos años
+    df_f = df[df[tiempo].isin([anio_i, anio_f])]
+    df_p = df_f.groupby([rubro, tiempo])[valor].sum().unstack(fill_value=0).reset_index()
+    df_p.columns = [rubro, 'Inicio', 'Fin']
+    
+    # 2. Clasificación técnica para la pregunta
+    def clasificar(row):
+        if row['Inicio'] == 0: return '✨ Nuevo (No existía)'
+        if row['Fin'] > (row['Inicio'] * 5): return '🚀 Crecimiento Explosivo'
+        return ' Tradicional'
+    
+    df_p['Categoría'] = df_p.apply(clasificar, axis=1)
+    
+    # 3. Crear el gráfico con Plotly usando la paleta unificada
+    # Usamos el azul #3182bd para el crecimiento y tonos grises/celestes para balancear
+    fig = px.scatter(df_p, x="Inicio", y="Fin",
+                     size="Fin", color="Categoría",
+                     hover_name=rubro, 
+                     log_x=False, size_max=60,
+                     title=f"<b>Evolución de Rubros: {anio_i} vs {anio_f}</b>",
+                     labels={"Inicio": f"Hectáreas en {anio_i}", "Fin": f"Hectáreas en {anio_f}"},
+                     color_discrete_map={
+                         ' Crecimiento Explosivo': '#3182bd',  # Su azul de referencia (Protagonista)
+                         ' Nuevo (No existía)': '#6baed6',     # Un azul más claro para los nuevos
+                         ' Tradicional': '#bdbdbd'            # Gris para lo que no cambió mucho
+                     })
+
+    # 4. Estética de reporte
+    fig.update_layout(
+        template="plotly_white", 
+        height=600,
+        title_x=0.5,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    
+    fig.show()
+
+
+
+
 def grafico_eficiencia_cultivos(df, titulo="Eficiencia de Cultivos"):
     
     df = df.copy()
