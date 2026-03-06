@@ -266,29 +266,31 @@ def grafico_burbujas_emergentes_plotly(df, rubro, tiempo, valor, anio_i, anio_f)
     df_p = df_f.groupby([rubro, tiempo])[valor].sum().unstack(fill_value=0).reset_index()
     df_p.columns = [rubro, 'Inicio', 'Fin']
     
-    # 2. Clasificación técnica para la pregunta
+    # 2. Clasificación técnica (Asegúrese que los nombres coincidan con el mapa de abajo)
     def clasificar(row):
-        if row['Inicio'] == 0: return '✨ Nuevo (No existía)'
-        if row['Fin'] > (row['Inicio'] * 5): return '🚀 Crecimiento Explosivo'
-        return ' Tradicional'
+        if row['Inicio'] == 0: return 'Nuevo (No existía)'
+        if row['Fin'] > (row['Inicio'] * 5): return 'Crecimiento Explosivo'
+        return 'Tradicional'
     
     df_p['Categoría'] = df_p.apply(clasificar, axis=1)
     
-    # 3. Crear el gráfico con Plotly usando la paleta unificada
-    # Usamos el azul #3182bd para el crecimiento y tonos grises/celestes para balancear
+    # 3. Mapeo de colores EXPLÍCITO (Usando el azul #3182bd de su referencia)
+    colores_unificados = {
+        'Crecimiento Explosivo': '#3182bd',  # El azul de image_7.png
+        'Nuevo (No existía)': '#9ecae1',     # Un azul más suave para armonizar
+        'Tradicional': '#d9d9d9'             # Gris neutro para no distraer
+    }
+    
+    # 4. Crear el gráfico
     fig = px.scatter(df_p, x="Inicio", y="Fin",
-                     size="Fin", color="Categoría",
+                     size="Fin", 
+                     color="Categoría", # Esto le dice a Plotly qué columna mirar
+                     color_discrete_map=colores_unificados, # Esto le dice qué color usar
                      hover_name=rubro, 
-                     log_x=False, size_max=60,
+                     size_max=60,
                      title=f"<b>Evolución de Rubros: {anio_i} vs {anio_f}</b>",
-                     labels={"Inicio": f"Hectáreas en {anio_i}", "Fin": f"Hectáreas en {anio_f}"},
-                     color_discrete_map={
-                         ' Crecimiento Explosivo': '#3182bd',  # Su azul de referencia (Protagonista)
-                         ' Nuevo (No existía)': '#6baed6',     # Un azul más claro para los nuevos
-                         ' Tradicional': '#bdbdbd'            # Gris para lo que no cambió mucho
-                     })
+                     labels={"Inicio": f"Hectáreas en {anio_i}", "Fin": f"Hectáreas en {anio_f}"})
 
-    # 4. Estética de reporte
     fig.update_layout(
         template="plotly_white", 
         height=600,
@@ -297,7 +299,6 @@ def grafico_burbujas_emergentes_plotly(df, rubro, tiempo, valor, anio_i, anio_f)
     )
     
     fig.show()
-
 
 
 
