@@ -14,7 +14,7 @@ def get_Tabla(nombre_tabla):
    
     
     conn = pyodbc.connect(
-    "DRIVER={ODBC Driver 17 for SQL Server};"
+    "DRIVER={SQL Server};"
     f"SERVER={servidor};"
     f"DATABASE={base_de_datos};"
     f"UID={usuario};"
