@@ -74,6 +74,408 @@ def reemplazar_nombre_municipios(df, columna, diccionario):
     df_copia[columna] = df_copia[columna].replace(diccionario)
     return df_copia
 
+
+def preparar_datos_area_volumen(df):
+    df_total = (
+        df.groupby("Rubro")
+          .agg({
+              "Área Producción": "sum",
+              "Volumen Producción": "sum"
+          })
+          .reset_index()
+    )
+    
+    df_total["Rendimiento"] = df_total["Volumen Producción"] / df_total["Área Producción"]
+    
+    df_total["Produccion_norm"] = df_total["Volumen Producción"] / df_total["Volumen Producción"].max()
+    df_total["Area_norm"] = df_total["Área Producción"] / df_total["Área Producción"].max()    
+    return df_total
+
+
+
+def grafica_top(df, columna_valor, titulo, subtitulo="", top_n=10):
+
+    df_top = df.sort_values(
+        by=columna_valor,
+        ascending=False
+    ).head(top_n)
+
+    fig = px.bar(
+        df_top,
+        x=columna_valor,
+        y="Rubro",
+        orientation="h",
+        text_auto=True
+    )
+
+    fig.update_traces(
+        marker_color="#2E86C1",
+        hovertemplate='<b>Rubro:</b> %{y}<br>' +
+                      '<b>Valor:</b> %{x:,.0f}<extra></extra>'
+    )
+
+    fig.update_layout(
+
+        title=f'<b>{titulo}</b><br><sup>{subtitulo}</sup>',
+
+        xaxis_title=columna_valor,
+        yaxis_title="Rubro",
+
+        template='plotly_white',
+
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+
+        margin=dict(l=20, r=20, t=100, b=20),
+
+        yaxis=dict(
+            categoryorder='total ascending',
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        ),
+
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        )
+    )
+
+    return fig
+
+
+def top_municipios(df, top=15):
+
+    prod = (
+        df.groupby("Municipio")["Volumen Producción"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(top)
+        .reset_index()
+    )
+
+    fig = px.bar(
+        prod,
+        x="Volumen Producción",
+        y="Municipio",
+        orientation="h",
+        color="Volumen Producción",
+        color_continuous_scale=["#85C1E9", "#2E86C1"],
+    )
+
+    fig.update_traces(
+        hovertemplate='<b>Municipio:</b> %{y}<br>' +
+                      '<b>Producción:</b> %{x:,.0f}<extra></extra>'
+    )
+
+    fig.update_layout(
+
+        title=f'<b>Top {top} municipios con mayor producción agrícola</b>'
+              '<br><sup>Volumen total acumulado en el periodo analizado</sup>',
+
+        xaxis_title="Volumen de Producción",
+        yaxis_title="Municipio",
+
+        template='plotly_white',
+
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+
+        margin=dict(l=20, r=20, t=100, b=20),
+
+        yaxis=dict(
+            categoryorder="total ascending",
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        ),
+
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        )
+    )
+
+    return fig
+
+def peso_produccion_sub_municipio(df):
+
+    prod = (
+        df.groupby(["Subregion", "Municipio"])["Volumen Producción"]
+        .sum()
+        .reset_index()
+    )
+
+    fig = px.treemap(
+        prod,
+        path=["Subregion", "Municipio"],
+        values="Volumen Producción",
+        color="Volumen Producción",
+        color_continuous_scale=["#85C1E9", "#2E86C1"]
+    )
+
+    fig.update_traces(
+        hovertemplate='<b>%{label}</b><br>' +
+                      'Producción: %{value:,.0f}<extra></extra>'
+    )
+
+    fig.update_layout(
+
+        title='<b>Distribución de la Producción Agrícola</b>'
+              '<br><sup>Participación de municipios dentro de cada subregión</sup>',
+
+        template='plotly_white',
+
+        height=700,   # 👈 gráfico más alto
+        width=1000,   # 👈 opcional, más ancho
+
+        margin=dict(
+            l=20,
+            r=20,
+            t=100,
+            b=20
+        )
+    )
+
+    return fig
+
+def heatmap_especializacion(df):
+
+    tabla = (
+        df.groupby(["Subregion","Rubro"])["Volumen Producción"]
+        .sum()
+        .reset_index()
+        .pivot(index="Subregion", columns="Rubro", values="Volumen Producción")
+        .fillna(0)
+    )
+
+    fig = go.Figure(data=go.Heatmap(
+        z=tabla.values,
+        x=tabla.columns,
+        y=tabla.index,
+        colorscale="YlGnBu"
+    ))
+
+    fig.update_layout(
+        title="Especialización agrícola por subregión",
+        xaxis_title="Rubro",
+        yaxis_title="Subregión"
+    )
+    return fig
+
+def especializacion_subregion(df):
+
+    prod = (
+        df.groupby(["Subregion","Rubro"])["Volumen Producción"]
+        .sum()
+        .reset_index()
+    )
+
+    fig = px.bar(
+        prod,
+        x="Subregion",
+        y="Volumen Producción",
+        color="Rubro",
+        title="Distribución de la producción agrícola por subregión y rubro"
+    )
+    return fig
+
+def top_rubro_subregion(df, top_rubros=3):
+
+    agg = (
+        df.groupby(["Subregion", "Rubro"])["Volumen Producción"]
+        .sum()
+        .reset_index()
+    )
+
+    top = (
+        agg.groupby("Rubro")["Volumen Producción"]
+        .sum()
+        .sort_values(ascending=False)
+        .head(top_rubros)
+        .index
+    )
+
+    agg = agg[agg["Rubro"].isin(top)]
+
+    labels = list(set(agg["Subregion"].tolist() + agg["Rubro"].tolist()))
+    label_to_idx = {label: i for i, label in enumerate(labels)}
+
+    source = agg["Subregion"].map(label_to_idx)
+    target = agg["Rubro"].map(label_to_idx)
+    value = agg["Volumen Producción"]
+
+    fig = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=18,
+            line=dict(color="black", width=0.5),
+            label=labels,
+            color="#85C1E9"
+        ),
+
+        link=dict(
+            source=source,
+            target=target,
+            value=value,
+            color="rgba(46,134,193,0.35)"
+        )
+    )])
+
+    fig.update_layout(
+
+        title='<b>Flujo de Producción Agrícola</b>'
+              '<br><sup>Relación entre subregiones y rubros principales</sup>',
+
+        template='plotly_white',
+
+        height=650,
+
+        margin=dict(
+            l=20,
+            r=20,
+            t=100,
+            b=20
+        ),
+
+        font_size=12
+    )
+
+    return fig
+
+
+def variacion_produccion(df):
+
+    prod = (
+        df.groupby("Año")["Volumen Producción"]
+        .sum()
+        .reset_index()
+        .sort_values("Año")
+    )
+
+    prod["Cambio"] = prod["Volumen Producción"].diff().fillna(0)
+
+    measure = ["absolute"] + ["relative"] * (len(prod) - 1)
+
+    fig = go.Figure(go.Waterfall(
+        x=prod["Año"],
+        y=prod["Cambio"],
+        measure=measure,
+
+        increasing={"marker":{"color":"#2E86C1"}},
+        decreasing={"marker":{"color":"#EF553B"}},
+
+        hovertemplate='<b>Año:</b> %{x}<br>' +
+                      '<b>Cambio:</b> %{y:,.0f}<extra></extra>'
+    ))
+
+    fig.update_layout(
+
+        title='<b>Variación Anual de la Producción Agrícola</b>'
+              '<br><sup>Cambios interanuales en el volumen total producido</sup>',
+
+        xaxis_title="Año",
+        yaxis_title="Cambio en Producción",
+
+        template='plotly_white',
+
+        margin=dict(
+            l=20,
+            r=20,
+            t=100,
+            b=20
+        ),
+
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        ),
+
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        )
+    )
+
+    fig.add_hline(
+        y=0,
+        line_dash="dash",
+        line_color="black",
+        opacity=0.3
+    )
+
+    return fig
+
+def grafica_comparacion_normalizada(df, top_n=10):
+
+    df_top = df.sort_values(
+        by="Produccion_norm",
+        ascending=False
+    ).head(top_n)
+
+    fig = px.bar(
+        df_top,
+        x="Rubro",
+        y=["Produccion_norm", "Area_norm"],
+        barmode="group",
+        color_discrete_sequence=["#2E86C1", "#85C1E9"]
+    )
+
+    fig.update_traces(
+        hovertemplate='<b>Rubro:</b> %{x}<br>' +
+                      '<b>Valor normalizado:</b> %{y:.2f}<extra></extra>'
+    )
+
+    fig.update_layout(
+
+        title='<b>Comparación Normalizada entre Producción y Área</b>'
+              '<br><sup>Escala relativa (0-1) para comparar magnitudes distintas</sup>',
+
+        xaxis_title="Rubro",
+        yaxis_title="Valor normalizado",
+
+        template='plotly_white',
+
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+
+        margin=dict(l=20, r=20, t=100, b=20),
+
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        ),
+
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        )
+    )
+
+    return fig
+
+
 # =============================================================================
 # GRÁFICO DE MANCUERNA 
 # =============================================================================
@@ -435,4 +837,114 @@ def grafico_agrupado_años(df, metrica="Volumen Producción", tipo=None, rubro=N
         hovermode="x unified"  # ← al hacer hover muestra todas las subregiones del año
     )
 
+    return fig
+
+def graficar_comparativa_volatilidad(df):
+    df_clean = df.copy()
+    df_clean['Año'] = pd.to_numeric(df_clean['Año'])
+    df_clean['Volumen Producción'] = pd.to_numeric(df_clean['Volumen Producción'], errors='coerce')
+    
+  
+    df_agrupado = df_clean.groupby(['Año', 'Tipo'])['Volumen Producción'].sum().reset_index()
+
+    
+    df_agrupado = df_agrupado.sort_values(['Tipo', 'Año'])
+    df_agrupado['variacion_anual'] = df_agrupado.groupby('Tipo')['Volumen Producción'].pct_change() * 100
+
+    
+    fig = go.Figure()
+
+   
+    colores = {'Transitorios': '#EF553B', 'Permanentes': '#636EFA'}
+
+    for tipo in ['Transitorios', 'Permanentes']:
+        df_tipo = df_agrupado[df_agrupado['Tipo'] == tipo]
+        
+        fig.add_trace(go.Scatter(
+            x=df_tipo['Año'],
+            y=df_tipo['variacion_anual'],
+            mode='lines+markers',
+            name=tipo,
+            line=dict(width=3, color=colores.get(tipo)),
+            marker=dict(size=8),
+            hovertemplate='<b>Año:</b> %{x}<br>' +
+                          '<b>Variación:</b> %{y:.2f}%<extra></extra>'
+        ))
+
+ 
+    fig.update_layout(
+        title='<b>Análisis de Volatilidad: Cultivos Transitorios vs. Permanentes</b><br><sup>Variación porcentual anual de la producción en Antioquia</sup>',
+        xaxis_title='Año',
+        yaxis_title='Variación de Producción (%)',
+        hovermode='x unified',
+        template='plotly_white',
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        margin=dict(l=20, r=20, t=100, b=20)
+    )
+
+    
+    fig.add_hline(y=0, line_dash="dash", line_color="black", opacity=0.3)
+
+    return fig
+
+
+def graficar_tasa_perdida_rubro(df):
+   
+    df_clean = df.copy()
+    df_clean.columns = (
+        df_clean.columns
+        .str.strip()
+        .str.lower()
+        .str.replace('ñ', 'n')
+        .str.replace('á', 'a')
+        .str.replace('é', 'e')
+        .str.replace('í', 'i')
+        .str.replace('ó', 'o')
+        .str.replace('ú', 'u')
+    )
+
+    col_rubro = 'rubro'
+    col_area_total = 'area total'
+    col_area_prod = 'area produccion'
+
+    df_clean[col_area_total] = pd.to_numeric(df_clean[col_area_total], errors='coerce')
+    df_clean[col_area_prod] = pd.to_numeric(df_clean[col_area_prod], errors='coerce')
+
+    df_agrupado = df_clean.groupby(col_rubro)[[col_area_total, col_area_prod]].sum().reset_index()
+
+    df_agrupado['area_perdida'] = df_agrupado[col_area_total] - df_agrupado[col_area_prod]
+    
+    df_agrupado = df_agrupado[df_agrupado[col_area_total] > 0]
+ 
+    df_agrupado['tasa_perdida_pct'] = (df_agrupado['area_perdida'] / df_agrupado[col_area_total]) * 100
+
+    df_significativo = df_agrupado[df_agrupado[col_area_total] > 500]
+
+    df_top = df_significativo.sort_values('tasa_perdida_pct', ascending=False).head(15)
+
+    fig = px.bar(
+        df_top,
+        x='tasa_perdida_pct',
+        y=col_rubro,
+        orientation='h',
+        title='<b>Top 15 Cultivos con Mayor Tasa de Pérdida de Tierra</b><br><sup>% de hectáreas sembradas que NO lograron cosecharse</sup>',
+        labels={
+            'tasa_perdida_pct': 'Tasa de Pérdida (%)', 
+            col_rubro: 'Cultivo (Rubro)'
+        },
+        color='tasa_perdida_pct',
+        color_continuous_scale='Reds', 
+        text_auto='.2f' 
+    )
+
+    fig.update_layout(
+        yaxis={'categoryorder': 'total ascending'}, 
+        template='plotly_white',
+        coloraxis_showscale=False,
+        margin=dict(l=20, r=20, t=80, b=20)
+    )
+
+    fig.update_traces(
+        hovertemplate="<b>%{y}</b><br>Tasa de pérdida: %{x:.2f}%<extra></extra>"
+    )
     return fig
