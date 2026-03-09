@@ -150,65 +150,7 @@ def grafica_top(df, columna_valor, titulo, subtitulo="", top_n=10):
     return fig
 
 
-def top_municipios(df, top=15):
 
-    prod = (
-        df.groupby("Municipio")["Volumen Producción"]
-        .sum()
-        .sort_values(ascending=False)
-        .head(top)
-        .reset_index()
-    )
-
-    fig = px.bar(
-        prod,
-        x="Volumen Producción",
-        y="Municipio",
-        orientation="h",
-        color="Volumen Producción",
-        color_continuous_scale=["#85C1E9", "#2E86C1"],
-    )
-
-    fig.update_traces(
-        hovertemplate='<b>Municipio:</b> %{y}<br>' +
-                      '<b>Producción:</b> %{x:,.0f}<extra></extra>'
-    )
-
-    fig.update_layout(
-
-        title=f'<b>Top {top} municipios con mayor producción agrícola</b>'
-              '<br><sup>Volumen total acumulado en el periodo analizado</sup>',
-
-        xaxis_title="Volumen de Producción",
-        yaxis_title="Municipio",
-
-        template='plotly_white',
-
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1
-        ),
-
-        margin=dict(l=20, r=20, t=100, b=20),
-
-        yaxis=dict(
-            categoryorder="total ascending",
-            showgrid=True,
-            gridcolor="rgba(0,0,0,0.08)",
-            gridwidth=1
-        ),
-
-        xaxis=dict(
-            showgrid=True,
-            gridcolor="rgba(0,0,0,0.08)",
-            gridwidth=1
-        )
-    )
-
-    return fig
 
 def peso_produccion_sub_municipio(df):
 
@@ -356,69 +298,7 @@ def top_rubro_subregion(df, top_rubros=3):
     return fig
 
 
-def variacion_produccion(df):
 
-    prod = (
-        df.groupby("Año")["Volumen Producción"]
-        .sum()
-        .reset_index()
-        .sort_values("Año")
-    )
-
-    prod["Cambio"] = prod["Volumen Producción"].diff().fillna(0)
-
-    measure = ["absolute"] + ["relative"] * (len(prod) - 1)
-
-    fig = go.Figure(go.Waterfall(
-        x=prod["Año"],
-        y=prod["Cambio"],
-        measure=measure,
-
-        increasing={"marker":{"color":"#2E86C1"}},
-        decreasing={"marker":{"color":"#EF553B"}},
-
-        hovertemplate='<b>Año:</b> %{x}<br>' +
-                      '<b>Cambio:</b> %{y:,.0f}<extra></extra>'
-    ))
-
-    fig.update_layout(
-
-        title='<b>Variación Anual de la Producción Agrícola</b>'
-              '<br><sup>Cambios interanuales en el volumen total producido</sup>',
-
-        xaxis_title="Año",
-        yaxis_title="Cambio en Producción",
-
-        template='plotly_white',
-
-        margin=dict(
-            l=20,
-            r=20,
-            t=100,
-            b=20
-        ),
-
-        xaxis=dict(
-            showgrid=True,
-            gridcolor="rgba(0,0,0,0.08)",
-            gridwidth=1
-        ),
-
-        yaxis=dict(
-            showgrid=True,
-            gridcolor="rgba(0,0,0,0.08)",
-            gridwidth=1
-        )
-    )
-
-    fig.add_hline(
-        y=0,
-        line_dash="dash",
-        line_color="black",
-        opacity=0.3
-    )
-
-    return fig
 
 def grafica_comparacion_normalizada(df, top_n=10):
 
@@ -704,43 +584,113 @@ def grafico_burbujas_emergentes_plotly(df, rubro, tiempo, valor, anio_i, anio_f)
 
 
 
-def grafico_eficiencia_cultivos(df, titulo="Eficiencia de Cultivos"):
-    
+def grafico_eficiencia_cultivos(df, titulo="¿Qué cultivos son más eficientes en Antioquia?"):
+ 
     df = df.copy()
-    df["Área Total"]         = pd.to_numeric(df["Área Total"],         errors="coerce")
+ 
+    df["Área Total"] = pd.to_numeric(df["Área Total"], errors="coerce")
     df["Volumen Producción"] = pd.to_numeric(df["Volumen Producción"], errors="coerce")
-
+    df["Rubro"] = df["Rubro"].astype(str).str.strip().str.capitalize()
+ 
     df_agrupado = df.groupby("Rubro").agg(
         Area_Total=("Área Total", "mean"),
         Volumen_Produccion=("Volumen Producción", "mean")
     ).reset_index()
-
+ 
     mediana_x = df_agrupado["Area_Total"].median()
     mediana_y = df_agrupado["Volumen_Produccion"].median()
-
+ 
     fig = px.scatter(
         df_agrupado,
         x="Area_Total",
         y="Volumen_Produccion",
-        text="Rubro",
-        title=titulo,
+        hover_data=["Rubro"],
         labels={
             "Area_Total": "Área Total Promedio (ha)",
-            "Volumen_Produccion": "Volumen de Producción Promedio (ton)"
+            "Volumen_Produccion": "Volumen de Producción Promedio (ton)",
+            "Rubro":"Rubro"
         },
         template="plotly_white"
     )
-
-    fig.update_traces(textposition="top center", marker=dict(size=10, color="steelblue", opacity=0.8))
-    fig.add_vline(x=mediana_x, line_dash="dash", line_color="red",   annotation_text="Mediana Área",       annotation_position="top")
-    fig.add_hline(y=mediana_y, line_dash="dash", line_color="green", annotation_text="Mediana Producción", annotation_position="right")
-
-    fig.add_annotation(x=df_agrupado["Area_Total"].max() * 0.9, y=df_agrupado["Volumen_Produccion"].max() * 0.95, text="Mucha tierra,<br>alta producción",          showarrow=False, font=dict(color="green"))
-    fig.add_annotation(x=df_agrupado["Area_Total"].max() * 0.9, y=df_agrupado["Volumen_Produccion"].min() * 1.5,  text="Mucha tierra,<br>poca producción",           showarrow=False, font=dict(color="red"))
-    fig.add_annotation(x=df_agrupado["Area_Total"].min(),        y=df_agrupado["Volumen_Produccion"].max() * 0.95, text="Eficientes<br>(poco espacio,<br>alta producción)", showarrow=False, font=dict(color="blue"))
-
-    fig.update_layout(title_font_size=20)
+ 
+    fig.update_traces(
+        textposition="top center",
+        marker=dict(
+            size=11,
+            color="#2E86C1",
+            opacity=0.75
+        )
+    )
+ 
     
+    fig.add_vline(
+        x=mediana_x,
+        line_dash="dash",
+        line_color="#EF553B",
+        annotation_text="Mediana Área",
+        annotation_position="top"
+    )
+ 
+    fig.add_hline(
+        y=mediana_y,
+        line_dash="dash",
+        line_color="green",
+        annotation_text="Mediana Producción",
+        annotation_position="right"
+    )
+ 
+    
+    fig.add_annotation(
+        x=df_agrupado["Area_Total"].max()*0.85,
+        y=df_agrupado["Volumen_Produccion"].max()*0.95,
+        text="Mucha tierra,<br>alta producción",
+        showarrow=False,
+        font=dict(color="green", size=12)
+    )
+ 
+    fig.add_annotation(
+        x=df_agrupado["Area_Total"].max()*0.85,
+        y=df_agrupado["Volumen_Produccion"].min()*2,
+        text="Mucha tierra,<br>poca producción",
+        showarrow=False,
+        font=dict(color="red", size=12)
+    )
+ 
+    fig.add_annotation(
+        x=df_agrupado["Area_Total"].min()*1.2,
+        y=df_agrupado["Volumen_Produccion"].max()*0.95,
+        text="Eficientes<br>(poco espacio,<br>alta producción)",
+        showarrow=False,
+        font=dict(color="blue", size=12)
+    )
+ 
+    fig.update_layout(
+ 
+        title='<b>¿Qué cultivos son más eficientes en Antioquia?</b>'
+              '<br><sup>Relación entre área cultivada y volumen promedio de producción</sup>',
+ 
+        height=650,
+ 
+        margin=dict(
+            l=20,
+            r=20,
+            t=100,
+            b=20
+        ),
+ 
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        ),
+ 
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(0,0,0,0.08)",
+            gridwidth=1
+        )
+    )
+ 
     return fig
 
 
