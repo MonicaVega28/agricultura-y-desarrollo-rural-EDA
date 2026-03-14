@@ -3,3 +3,13 @@ pandas==3.0.0
 matplotlib==3.10.8
 seaborn==0.13.2
 geopandas==1.1.2
+matplotlib.pyplot==3.10.8
+mapclassify==2.4.0
+folium==0.14.0
+unicodedata
+plotly.express==0.4.1
+plotly.graph_objects==0.4.1
+plotly.subplots==0.4.1
+dotenv==0.19.2
+pyodbc==4.0.32
+os

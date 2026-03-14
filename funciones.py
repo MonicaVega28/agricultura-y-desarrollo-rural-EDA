@@ -84,11 +84,7 @@ def preparar_datos_area_volumen(df):
           })
           .reset_index()
     )
-    
-    df_total["Rendimiento"] = df_total["Volumen Producción"] / df_total["Área Producción"]
-    
-    df_total["Produccion_norm"] = df_total["Volumen Producción"] / df_total["Volumen Producción"].max()
-    df_total["Area_norm"] = df_total["Área Producción"] / df_total["Área Producción"].max()    
+
     return df_total
 
 
@@ -180,8 +176,8 @@ def peso_produccion_sub_municipio(df):
 
         template='plotly_white',
 
-        height=700,   # 👈 gráfico más alto
-        width=1000,   # 👈 opcional, más ancho
+        height=700, 
+        width=1000,  
 
         margin=dict(
             l=20,
